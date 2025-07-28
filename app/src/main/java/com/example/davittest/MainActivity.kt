@@ -9,10 +9,14 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.davittest.presentation.screen.ProfileScreenContent
-import com.example.davittest.presentation.screen.ProfileUiState
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.davittest.presentation.screen.ProfileScreen
+import com.example.davittest.presentation.screen.ProfileScreenViewModel
 import com.example.davittest.ui.theme.DavitTestTheme
 
 class MainActivity : ComponentActivity() {
@@ -22,11 +26,19 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             DavitTestTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    ProfileScreenContent(
-                        uiState = ProfileUiState(),
-                        onAction = { },
-                        modifier = Modifier.fillMaxSize().padding(innerPadding).padding(20.dp))
+                val snackBarHostState = remember { SnackbarHostState() }
+                val viewModel: ProfileScreenViewModel = viewModel<ProfileScreenViewModel>()
+                Scaffold(modifier = Modifier.fillMaxSize(), snackbarHost = { SnackbarHost(snackBarHostState) }) { innerPadding ->
+                    ProfileScreen(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                            .padding(20.dp),
+
+                        viewModel = viewModel,
+                        snackbarHostState = snackBarHostState
+                    )
+
                 }
             }
         }

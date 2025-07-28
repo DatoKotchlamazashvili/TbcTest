@@ -1,6 +1,7 @@
 package com.example.davittest.presentation.screen
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -11,14 +12,18 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Stable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.davittest.design_system.MenuItem
 import com.example.davittest.design_system.ScreenHeader
 import com.example.davittest.design_system.calendar.TbcCalendar
@@ -28,51 +33,72 @@ import com.example.davittest.design_system.transfer_info.TbcTransferInfo
 import com.example.davittest.design_system.transfer_info.TransferInfo
 import com.example.davittest.presentation.components.MyProfile
 import com.example.davittest.presentation.components.Profile
-import com.example.davittest.presentation.model.Account
-import com.example.davittest.presentation.model.TransactionUi
-import com.example.davittest.presentation.model.getAccount
-import com.example.davittest.presentation.model.getTransaction
-import com.example.davittest.presentation.model.toPresentation
+import com.example.davittest.presentation.extension.CollectAsUiEvents
 import com.example.davittest.ui.theme.LocalDimension
-import java.time.LocalDateTime
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
+import kotlin.contracts.Effect
 import kotlin.random.Random
 
-sealed interface ProfileEvents {
-    data object OnBackClicked : ProfileEvents
-    data object OnMoreClicked : ProfileEvents
-    data class OnAccountClicked(val id: String) : ProfileEvents
 
-    data object OnAddNewAccountClicked: ProfileEvents
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun ProfileScreen(viewModel: ProfileScreenViewModel,snackbarHostState: SnackbarHostState,modifier: Modifier = Modifier) {
 
-    data class OnDateChanged(val currentDate:Long,val endDate: Long): ProfileEvents
+    val uiState  = viewModel.state.collectAsStateWithLifecycle()
+
+    Log.d("uiState",uiState.toString())
+
+    ProfileScreenContent(
+        uiState = uiState.value,
+        onAction = viewModel::onAction,
+        modifier = modifier,
+        effects = viewModel.effect,
+        onNavigateBack = {  },
+        onNavigateToAccount = {  },
+        onNavigateToAddNewAccount = {  },
+        snackbarHostState = snackbarHostState,
+    )
 }
 
 
-@Stable
-data class ProfileUiState(
-    val profile: Profile = Profile(
-        img = "sdjkfhsdfjk", name = "Khatia Gogua", job = "Mom"
-    ),
-    val transactions: List<TransactionUi> = getTransaction().map { it.toPresentation() },
-    val accounts: List<Account> = getAccount(),
-    val selectedStartDate: Long = System.currentTimeMillis(),
-    val selectedEndDate:Long = System.currentTimeMillis()
-)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun ProfileScreenContent(
     uiState: ProfileUiState,
-    onAction: (ProfileEvents) -> Unit,
+    onAction: (ProfileAction) -> Unit,
+    effects: Flow<ProfileEffect>,
+    onNavigateBack:()->Unit,
+    onNavigateToAccount:(String)->Unit,
+    onNavigateToAddNewAccount:()-> Unit,
+    snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
+
+
+    effects.CollectAsUiEvents{ effect ->
+        when(effect){
+            is ProfileEffect.OnError -> snackbarHostState.showSnackbar(effect.message)
+            ProfileEffect.OnNavigateBack -> {
+                onNavigateBack()
+            }
+            is ProfileEffect.OnNavigateToAccount -> {
+                onNavigateToAccount(effect.id)
+            }
+            ProfileEffect.OnNavigateToAddNewAccount -> {
+                onNavigateToAddNewAccount()
+            }
+        }
+    }
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(LocalDimension.current.dimension8),
     ) {
         item {
             ScreenHeader(
-                onBackClick = { onAction(ProfileEvents.OnBackClicked) },
-                onMoreClick = { ProfileEvents.OnMoreClicked }
+                onBackClick = { onAction(ProfileAction.OnBackClicked) },
+                onMoreClick = { onAction(ProfileAction.OnMoreClicked) }
             )
             Spacer(modifier = Modifier.height(LocalDimension.current.dimension32))
 
@@ -89,7 +115,7 @@ fun ProfileScreenContent(
                 subText = account.subText,
                 iconEnd = account.iconEnd,
                 iconEndColor = Color.Cyan,
-                onIconEndClick = { onAction(ProfileEvents.OnAccountClicked(account.id)) }
+                onIconEndClick = { onAction(ProfileAction.OnAccountClicked(account.id)) }
             )
         }
 
@@ -97,7 +123,7 @@ fun ProfileScreenContent(
             MenuItem(
                 iconStart = Icons.Default.Add,
                 mainText = "Add new Account",
-                onIconStartClick = { onAction(ProfileEvents.OnAddNewAccountClicked) }
+                onIconStartClick = { onAction(ProfileAction.OnAddNewAccountClicked) }
             )
 
             Spacer(modifier = Modifier.height(LocalDimension.current.dimension32))
@@ -111,7 +137,7 @@ fun ProfileScreenContent(
                     currentStart = uiState.selectedStartDate,
                     currentEnd = uiState.selectedEndDate,
                 ){startDate,endDate->
-                    onAction(ProfileEvents.OnDateChanged(startDate,endDate))
+                    onAction(ProfileAction.OnDateChanged(startDate,endDate))
                 }
             }
 
@@ -155,6 +181,12 @@ private fun ProfileScreenContentPreivew() {
     TbcPreview {
         ProfileScreenContent(
             uiState = ProfileUiState(),
-            onAction = { })
+            onAction = { },
+            effects = flowOf(),
+            onNavigateBack = {  },
+            onNavigateToAccount = {  },
+            onNavigateToAddNewAccount = {  },
+            snackbarHostState = SnackbarHostState(),
+        )
     }
 }
