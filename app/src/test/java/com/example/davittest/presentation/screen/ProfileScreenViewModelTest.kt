@@ -103,9 +103,7 @@ class ProfileScreenViewModelTest {
 
         val effects = mutableListOf<ProfileEffect>()
         val job = launch {
-            viewModel.effect.take(1)
-
-                .toList(effects)
+            viewModel.effect.take(1).toList(effects)
         }
 
         viewModel.onAction(ProfileAction.OnAccountClicked(profileId))

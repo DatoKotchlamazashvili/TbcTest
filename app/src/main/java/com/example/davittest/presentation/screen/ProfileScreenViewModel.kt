@@ -2,8 +2,11 @@ package com.example.davittest.presentation.screen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.davittest.analytics.AnalyticsProvider
+import com.example.davittest.presentation.analytics.ProfilePostHogEvents
 import com.example.davittest.testing.DispatcherProvider
 import com.example.davittest.testing.StandardDispatchers
+import com.posthog.PostHog
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,8 +15,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class ProfileScreenViewModel(
-    private val dispatchers: DispatcherProvider = StandardDispatchers
-
+    private val dispatchers: DispatcherProvider = StandardDispatchers,
+    private val posthogAnalyticsHelper: AnalyticsProvider,
 ): ViewModel() {
 
     private val _state = MutableStateFlow(ProfileUiState())
@@ -43,6 +46,7 @@ class ProfileScreenViewModel(
                 }
             }
             is ProfileAction.OnDateChanged -> {
+                posthogAnalyticsHelper.trackCustomEvent(ProfilePostHogEvents.profileCalendarClicked)
                 _state.update { it.copy(selectedStartDate = action.currentDate, selectedEndDate = action.endDate) }
             }
             ProfileAction.OnMoreClicked -> {
